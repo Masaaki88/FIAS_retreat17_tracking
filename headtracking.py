@@ -1,11 +1,18 @@
 import cv2
 import numpy as np
+import pdb
 
-def draw_rect(frame):
-
-    frame_grayscale = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+def find_faces(frame):
+    frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     faces = face_cascade.detectMultiScale(frame_grayscale, 1.3, 5)
+
+    return faces
+
+def draw_faces(frame, faces):
+
+    frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
     for (x, y, w, h) in faces:
         cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
         roi_gray = frame_grayscale[y:y + h, x:x + w]
@@ -17,12 +24,18 @@ def draw_rect(frame):
     return frame
 
 def main():
+    lstFoundFaces = []
     cv2.namedWindow("Video")
     frames = 0
     while True:
         _, frame = cap.read()
         frames += 1
-        cv2.imshow("Video", draw_rect(frame));
+        faces = find_faces(frame)
+        if np.asarray(faces).size == 0:
+            faces = lstFoundFaces
+        else:
+            lstFoundFaces = faces
+        cv2.imshow("Video", draw_faces(frame, faces));
         k = cv2.waitKey(5) & 0xFF
 
 
