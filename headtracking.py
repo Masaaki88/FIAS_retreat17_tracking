@@ -3,6 +3,8 @@ import numpy as np
 import pdb
 import matplotlib.cm as cm
 from sound_output import start_sound_output
+import threading
+
 
 def find_faces(input):
 
@@ -74,8 +76,6 @@ def main():
 
         centers, faces = find_faces(frame_grayscale)
 
-        if len(centers) > 0:
-            print(int(centers[0][1] - frame.shape[1] / 2))
 
         if np.asarray(faces).size == 0:
             faces = lstFoundFaces
@@ -88,18 +88,76 @@ def main():
 
         k = cv2.waitKey(5) & 0xFF
 
+class Tracking(threading.Thread):
+	def __init__(self, graphics_out):
+		cv2.namedWindow('Facetracker')
+		
+		self.graphics_in = graphics_out
+		self.time = 1
+		self.lstFoundFaces = []
+		self.lstFoundCenters = []
+		self.running = True
+		
+		threading.Thread.__init__(self)
+		
+	def run(self):
+		start_sound_output()
+		while self.running:
+			#self.graphics_in(inputParams) #
+			self.time += 1
+
+			_, frame = self.graphics_in.read()
+			frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+			centers, faces = find_faces(frame_grayscale)
+
+
+			if np.asarray(faces).size == 0:
+				faces = self.lstFoundFaces
+				centers = self.lstFoundCenters
+			else:
+				self.lstFoundFaces = faces
+				self.lstFoundCenters = centers
+
+			cv2.imshow("Facetracker", draw_faces(frame_grayscale, color_frame(frame, self.time, centers), faces, centers));
+
+			key = cv2.waitKey(5) & 0xFF
+			if key != 255:
+				self.handle_key_event(key)
+				
+	def handle_key_event(self, key):
+		## TODO: implement keybindings
+		if key == 27: #key 'ESC'
+			cv2.destroyWindow('Facetracker')
+			self.running = False
+			return 0
+		elif 49 <= key <= 57: #keys '1' - '9'
+			pass
+		elif key == 82: #key 'up'
+			pass
+		elif key == 84: #key 'down'
+			pass
+		elif key == 111: #key 'o'
+			pass
+		elif key == 99: #key 'c'
+			pass
+		else:
+			print key
+				
+			
+		
 
 if __name__ == '__main__':
 	
-    #frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
-    frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt.xml')
-    #frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt2.xml')
-    #frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt_tree.xml')
-    #smile_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_smile.xml')
-    eye_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_eye.xml')
-    #profile_faces_cascade = cv2.CascadeClassifier('haarcascade/haarcascade_profileface.xml')
-
-
-    cap = cv2.VideoCapture(0)
-
-    main()
+	#frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
+	frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt.xml')
+	#frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt2.xml')
+	#frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt_tree.xml')
+	#smile_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_smile.xml')
+	eye_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_eye.xml')
+	#profile_faces_cascade = cv2.CascadeClassifier('haarcascade/haarcascade_profileface.xml')
+	cap = cv2.VideoCapture(0)
+	tracker = Tracking(graphics_out = cap) # geht das oder muss das eine function sein?
+	tracker.start()
+    
+	#main()
