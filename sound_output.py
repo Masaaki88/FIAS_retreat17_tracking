@@ -22,9 +22,9 @@ def get_sound(freq):
     return a_sound_ramp2, error
 
 
-def sound_process():
-    sound = get_sound(freq)
-    while True:
+def sound_process(conn):
+    sound, error = get_sound(freq)
+    while not error:
         sound.play()
         print 'sound'
 

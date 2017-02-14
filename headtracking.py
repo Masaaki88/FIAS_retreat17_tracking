@@ -2,7 +2,8 @@ import cv2
 import numpy as np
 import pdb
 import matplotlib.cm as cm
-from sound_output import start_sound_output
+from sound_output import start_sound_output, sound_process
+from multiprocessing import Process, Pipe
 
 def find_faces(input):
 
@@ -65,6 +66,9 @@ def main():
     lstFoundCenters = []
     cv2.namedWindow("Video")
     frames = 0
+    #parent_conn, child_conn = Pipe()
+    #p = Process(target=sound_process, args=(child_conn,))
+    #p.start()
     start_sound_output()
     while True:
         frames += 1
