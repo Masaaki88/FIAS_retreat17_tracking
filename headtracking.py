@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import pdb
 import matplotlib.cm as cm
+from sound_output import start_sound_output
 
 def find_faces(input):
 
@@ -35,7 +36,7 @@ def color_frame(frame, scale):
 
     frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    print(cm.hot(np.arange(256))[:,2])
+    #print(cm.hot(np.arange(256))[:,2])
 
     b = np.roll(np.squeeze((cm.prism(np.arange(256))[:,2]*255).astype(np.uint8)), scale * factor)
     g = np.roll(np.squeeze((cm.prism(np.arange(256))[:,1]*255).astype(np.uint8)), scale * factor)
@@ -53,6 +54,7 @@ def main():
     lstFoundFaces = []
     cv2.namedWindow("Video")
     frames = 0
+    start_sound_output()
     while True:
         frames += 1
 

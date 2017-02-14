@@ -28,6 +28,8 @@ import pdb
 import time
 import io
 from multiprocessing import Process, Pipe
+from brian import *
+from brian.hears import *
 
 import matplotlib
 matplotlib.use('pdf') #Actually, we don't need pdf, but it doesn't use gtk which avoids a conflict between GTK2 and GTK3 (matplotlib and opencv) 
@@ -247,12 +249,18 @@ spectra.append( np.array([[1,5.0/4.0,5.0/3.0],[1,1,1]]) ) #minor chord
 
 
 def make_music(conn):
-    #init_wave = np.sin(int(5)*2*np.pi*np.linspace(0,1,1024))
-    #init_wave = np.zeros(1024)
+#    init_wave = np.sin(int(5)*2*np.pi*np.linspace(0,1,1024))
+#    init_wave = np.zeros(1024)
+#    sound = Sound(init_wave)
+#    sound.play()
+    while True:
+        a_sound = vowel('a', duration=1*second)
+        a_sound = a_sound.ramped(duration=1*second).ramped(when='offset', duration=1*second)
+        a_sound.play()
     #play(init_wave, conn, fs=44100)
     #new:
-    dev = AlsaDevice(fs=44100, nchannels=1)
-    dev.play(spectra[0], conn)
+    #dev = AlsaDevice(fs=44100, nchannels=1)
+    #dev.play(spectra[0], conn)
 
 def adjust_sound(x1,y1,x2,y2):
     frequency = frequency_map( y1/float(shape[1]) )
@@ -289,10 +297,10 @@ if __name__ == '__main__':
     frequency_map_inverse = lambda f: np.log2(f/base_frequency)/n_octaves #the inverse is required to plot the overlay
     
     #start process to generate the sound
-    if ALSA:
-        parent_conn, child_conn = Pipe()
-        p = Process(target=make_music, args=(child_conn,))
-        p.start()
+    parent_conn, child_conn = Pipe()
+    p = Process(target=make_music, args=(child_conn,))
+    p.start()
+
     #start tracking
     track = Tracking(process_coordinates=adjust_sound)
     track.start()
