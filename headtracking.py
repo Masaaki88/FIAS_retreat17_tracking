@@ -2,8 +2,7 @@ import cv2
 import numpy as np
 import pdb
 import matplotlib.cm as cm
-from sound_output import start_sound_output, sound_process
-from multiprocessing import Process, Pipe
+from sound_output import start_sound_output, adjust_sound
 
 def find_faces(input):
 
@@ -77,6 +76,7 @@ def main():
         frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         centers, faces = find_faces(frame_grayscale)
+        adjust_sound(centers)
 
         if len(centers) > 0:
             print(int(centers[0][1] - frame.shape[1] / 2))

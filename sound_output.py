@@ -2,9 +2,10 @@ from multiprocessing import Process, Pipe
 from brian import *
 from brian.hears import *
 
-freq = 1000
+#freq = 100
+parent_conn = None
 
-def get_sound(freq):
+def get_sound(freq=100):
     error = False
     while True:
         try:
@@ -23,11 +24,16 @@ def get_sound(freq):
 
 
 def sound_process(conn):
-    sound, error = get_sound(freq)
     sound_silence = silence(duration=0.5*second)
+    error = False
     while not error:
-        sound.play()
-        sound_silence.play()
+        try:
+            freq = conn.recv_bytes()
+        except EOFError:
+            freq = 100
+        sound, error = get_sound(freq)
+        sound.play(sleep=True)
+        sound_silence.play(sleep=True)
         #print 'sound'
 
 
@@ -36,3 +42,14 @@ def start_sound_output():
     parent_conn, child_conn = Pipe()
     p = Process(target=sound_process, args=(child_conn,))
     p.start()
+
+
+def adjust_sound(centers):
+    print 'centers:', centers
+    if len(centers) == 0:
+        freq = 100
+        print 'no center'
+    else:
+        freq = centers[0][0] + centers[0][1]
+    print 'sending freq:', freq
+    parent_conn.send_bytes([freq])
