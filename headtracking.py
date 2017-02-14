@@ -20,6 +20,11 @@ def draw_faces(frame, faces):
         eyes = eye_cascade.detectMultiScale(roi_gray)
         for (ex, ey, ew, eh) in eyes:
             cv2.rectangle(roi_color, (ex, ey), (ex + ew, ey + eh), (0, 255, 0), 2)
+            
+        #smiles = smile_cascade.detectMultiScale(roi_gray)
+        #for (ex, ey, ew, eh) in smiles:
+        #    cv2.rectangle(roi_color, (ex, ey), (ex + ew, ey + eh), (0, 255, 255), 2)
+            
 
     return frame
 
@@ -40,8 +45,12 @@ def main():
 
 
 if __name__ == '__main__':
-    face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-    eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
+    face_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
+    #face_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt.xml')
+    #face_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt2.xml')
+    #face_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt_tree.xml')
+    #smile_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_smile.xml')
+    eye_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_eye.xml')
 
     cap = cv2.VideoCapture(0)
 
