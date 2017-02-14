@@ -24,9 +24,11 @@ def get_sound(freq):
 
 def sound_process(conn):
     sound, error = get_sound(freq)
+    sound_silence = silence(duration=0.5*second)
     while not error:
         sound.play()
-        print 'sound'
+        sound_silence.play()
+        #print 'sound'
 
 
 def start_sound_output():
