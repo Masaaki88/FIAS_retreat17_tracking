@@ -35,7 +35,7 @@ def sound_process(conn):
             #print  'received freq_list:', freq_list
         except EOFError:
             recv_obj = [100]
-            print 'EOFError!'
+            print 'No frequency received'
         if recv_obj == ['kill']:
             p_process.terminate()
         else:
@@ -48,7 +48,7 @@ def sound_process(conn):
 
 
 def start_sound_output():
-    global parent_conn
+    global parent_conn, p_process
         #start process to generate the sound
     parent_conn, child_conn = Pipe()
     p_process = Process(target=sound_process, args=(child_conn,))

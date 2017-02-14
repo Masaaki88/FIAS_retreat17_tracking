@@ -102,7 +102,7 @@ class Tracking(threading.Thread):
         threading.Thread.__init__(self)
         
     def run(self):
-        self.parent_conn = start_sound_output()
+
         while self.running:
             #self.graphics_in(inputParams) #
             self.time += 1
@@ -127,11 +127,12 @@ class Tracking(threading.Thread):
                 self.handle_key_event(key)
                 
     def handle_key_event(self, key):
+        #global parent_conn
         ## TODO: implement keybindings
         if key == 27: #key 'ESC'
             cv2.destroyWindow('Facetracker')
             self.running = False
-            self.parent_conn.send(['kill'])
+            #parent_conn.send(['kill'])
             print 'closing'
             return 0
         elif 49 <= key <= 57: #keys '1' - '9'
@@ -160,6 +161,7 @@ if __name__ == '__main__':
     eye_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_eye.xml')
     #profile_faces_cascade = cv2.CascadeClassifier('haarcascade/haarcascade_profileface.xml')
     cap = cv2.VideoCapture(0)
+    #parent_conn = start_sound_output()
     tracker = Tracking(graphics_out = cap) # geht das oder muss das eine function sein?
     tracker.start()
     
