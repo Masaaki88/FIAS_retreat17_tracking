@@ -36,9 +36,11 @@ import pylab as pl
 try:
     #load my dirty hack derived from scikits.audiolab
     from _alsa_backend import AlsaDevice
+    ALSA = True
 except ImportError, e:
-    warnings.warn("Could not import alsa backend; most probably, "
-                      "you did not have alsa headers when building audiolab.soundio")
+    #warnings.warn("Could not import alsa backend; most probably, "
+    #                  "you did not have alsa headers when building audiolab.soundio")
+    ALSA = False
 
 
 cap = cv2.VideoCapture(0)
@@ -287,9 +289,10 @@ if __name__ == '__main__':
     frequency_map_inverse = lambda f: np.log2(f/base_frequency)/n_octaves #the inverse is required to plot the overlay
     
     #start process to generate the sound
-    parent_conn, child_conn = Pipe()
-    p = Process(target=make_music, args=(child_conn,))
-    p.start()
+    if ALSA:
+        parent_conn, child_conn = Pipe()
+        p = Process(target=make_music, args=(child_conn,))
+        p.start()
     #start tracking
     track = Tracking(process_coordinates=adjust_sound)
     track.start()
