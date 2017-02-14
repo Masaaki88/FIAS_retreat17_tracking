@@ -4,6 +4,7 @@ from brian.hears import *
 
 #freq = 100
 parent_conn = None
+p_process = None
 
 def get_sound(freq=100):
     error = False
@@ -25,20 +26,24 @@ def get_sound(freq=100):
 
 
 def sound_process(conn):
+    global p_process
     sound_silence = silence(duration=0.5*second)
     error = False
     while not error:
         try:
-            freq_list = conn.recv()
+            recv_obj = conn.recv()
             #print  'received freq_list:', freq_list
         except EOFError:
-            freq_list = [100]
+            recv_obj = [100]
             print 'EOFError!'
-        freq = freq_list[0]
+        if recv_obj == ['kill']:
+            p_process.terminate()
+        else:
+            freq = recv_obj[0]
         #print 'passing freq:', freq
         sound, error = get_sound(freq)
-        sound.play(sleep=True)
-        sound_silence.play(sleep=True)
+        sound.play(sleep=False)
+        sound_silence.play(sleep=False)
         #print 'sound'
 
 
@@ -46,8 +51,9 @@ def start_sound_output():
     global parent_conn
         #start process to generate the sound
     parent_conn, child_conn = Pipe()
-    p = Process(target=sound_process, args=(child_conn,))
-    p.start()
+    p_process = Process(target=sound_process, args=(child_conn,))
+    p_process.start()
+    return parent_conn
 
 
 def adjust_sound(centers):
