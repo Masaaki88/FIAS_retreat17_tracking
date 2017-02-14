@@ -7,6 +7,7 @@ parent_conn = None
 
 def get_sound(freq=100):
     error = False
+    print 'generating sound with freq:', freq
     while True:
         try:
             freq = float(freq)
@@ -28,9 +29,13 @@ def sound_process(conn):
     error = False
     while not error:
         try:
-            freq = conn.recv_bytes()
+            freq_list = conn.recv()
+            print  'received freq_list:', freq_list
         except EOFError:
-            freq = 100
+            freq_list = [100]
+            print 'EOFError!'
+        freq = freq_list[0]
+        print 'passing freq:', freq
         sound, error = get_sound(freq)
         sound.play(sleep=True)
         sound_silence.play(sleep=True)
@@ -38,6 +43,7 @@ def sound_process(conn):
 
 
 def start_sound_output():
+    global parent_conn
         #start process to generate the sound
     parent_conn, child_conn = Pipe()
     p = Process(target=sound_process, args=(child_conn,))
@@ -45,11 +51,9 @@ def start_sound_output():
 
 
 def adjust_sound(centers):
-    print 'centers:', centers
     if len(centers) == 0:
         freq = 100
-        print 'no center'
     else:
-        freq = centers[0][0] + centers[0][1]
-    print 'sending freq:', freq
-    parent_conn.send_bytes([freq])
+        freq = 5*(centers[0][0] + centers[0][1])
+    #print 'sending freq:', freq
+    parent_conn.send([freq])
