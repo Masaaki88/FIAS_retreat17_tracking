@@ -8,15 +8,21 @@ def find_faces(input):
 
     faces = frontal_faces_cascade.detectMultiScale(input, 1.3, 5)
 
-    if np.asarray(faces).size == 0:
-        faces = profile_faces_cascade.detectMultiScale(input, 1.3, 5)
+    #if np.asarray(faces).size == 0:
+        #faces = profile_faces_cascade.detectMultiScale(input, 1.3, 5)
 
-    return faces
+    centers = []
+    for (x,y,w,h) in faces:
+        centers.append((int(x + (w/2)), int(y + (h/2))))
 
-def draw_faces(grayscale_frame, frame, faces):
+    return centers, faces
+
+def draw_faces(grayscale_frame, frame, faces, centers):
 
     for (x, y, w, h) in faces:
         cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+        if len(centers) > 0:
+            cv2.circle(frame,centers[0],5,(0,0,255),2)
         roi_gray = grayscale_frame[y:y + h, x:x + w]
         roi_color = frame[y:y + h, x:x + w]
         eyes = eye_cascade.detectMultiScale(roi_gray)
@@ -30,17 +36,21 @@ def draw_faces(grayscale_frame, frame, faces):
 
     return frame
 
-def color_frame(frame, scale):
+def color_frame(frame, scale, centers):
 
-    factor = 10
+    if len(centers) > 0:
+        factor = int((centers[0][1] - frame.shape[1] / 2) / 10)
+    else:
+        factor = 0
+
+    #factor = scale * factor
+    factor = factor
 
     frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    #print(cm.hot(np.arange(256))[:,2])
-
-    b = np.roll(np.squeeze((cm.prism(np.arange(256))[:,2]*255).astype(np.uint8)), scale * factor)
-    g = np.roll(np.squeeze((cm.prism(np.arange(256))[:,1]*255).astype(np.uint8)), scale * factor)
-    r = np.roll(np.squeeze((cm.prism(np.arange(256))[:,0]*255).astype(np.uint8)), scale * factor)
+    b = np.roll(np.squeeze((cm.prism(np.arange(256))[:,2]*255).astype(np.uint8)), factor)
+    g = np.roll(np.squeeze((cm.prism(np.arange(256))[:,1]*255).astype(np.uint8)), factor)
+    r = np.roll(np.squeeze((cm.prism(np.arange(256))[:,0]*255).astype(np.uint8)), factor)
 
     frame_b = cv2.LUT(frame_grayscale, b)
     frame_g = cv2.LUT(frame_grayscale, g)
@@ -52,6 +62,7 @@ def color_frame(frame, scale):
 
 def main():
     lstFoundFaces = []
+    lstFoundCenters = []
     cv2.namedWindow("Video")
     frames = 0
     start_sound_output()
@@ -61,27 +72,32 @@ def main():
         _, frame = cap.read()
         frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        faces = find_faces(frame_grayscale)
+        centers, faces = find_faces(frame_grayscale)
+
+        if len(centers) > 0:
+            print(int(centers[0][1] - frame.shape[1] / 2))
 
         if np.asarray(faces).size == 0:
             faces = lstFoundFaces
+            centers = lstFoundCenters
         else:
             lstFoundFaces = faces
+            lstFoundCenters = centers
 
-        cv2.imshow("Video", draw_faces(frame_grayscale, color_frame(frame, frames), faces));
+        cv2.imshow("Video", draw_faces(frame_grayscale, color_frame(frame, frames, centers), faces, centers));
 
         k = cv2.waitKey(5) & 0xFF
 
 
 if __name__ == '__main__':
 	
-    frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
-    #frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt.xml')
+    #frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
+    frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt.xml')
     #frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt2.xml')
     #frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt_tree.xml')
     #smile_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_smile.xml')
     eye_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_eye.xml')
-    profile_faces_cascade = cv2.CascadeClassifier('haarcascade/haarcascade_profileface.xml')
+    #profile_faces_cascade = cv2.CascadeClassifier('haarcascade/haarcascade_profileface.xml')
 
 
     cap = cv2.VideoCapture(0)
