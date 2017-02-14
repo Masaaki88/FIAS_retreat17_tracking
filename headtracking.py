@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import pdb
 import matplotlib.cm as cm
-from sound_output import start_sound_output
 import threading
+from sound_output import start_sound_output, adjust_sound
 
 
 def find_faces(input):
@@ -67,6 +67,9 @@ def main():
     lstFoundCenters = []
     cv2.namedWindow("Video")
     frames = 0
+    #parent_conn, child_conn = Pipe()
+    #p = Process(target=sound_process, args=(child_conn,))
+    #p.start()
     start_sound_output()
     while True:
         frames += 1
@@ -75,6 +78,7 @@ def main():
         frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         centers, faces = find_faces(frame_grayscale)
+        adjust_sound(centers)
 
 
         if np.asarray(faces).size == 0:
