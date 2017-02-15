@@ -99,7 +99,7 @@ class Options:
         self.applyColormap = False
         self.trackFaces = False
         self.replaceEyes = False
-        self.playSound = False
+        self.playSound = True
 
 
 class Tracking(threading.Thread):
@@ -129,7 +129,7 @@ class Tracking(threading.Thread):
             frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             centers, faces = find_faces(frame_grayscale, self.options)
-            self.Sound_Manager.adjust_sound(centers)
+            self.Sound_Manager.adjust_sound(centers, self.options)
 
             if np.asarray(faces).size == 0:
                 faces = self.lstFoundFaces

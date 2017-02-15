@@ -33,19 +33,25 @@ class SoundManager():
     def sound_process(self):
         self.sound_silence = silence(duration=0.5*second)
         self.error = False
-        while self.playback and not self.error:
+        while not self.error:
             try:
                 self.recv_obj = self.child_conn.recv()
                 #print  'received freq_list:', freq_list
             except EOFError:
-                self.recv_obj = [100]
+                self.recv_obj = [100, None]
                 #print 'No frequency received'
             self.freq = self.recv_obj[0]
+            self.options = self.recv_obj[1]
+            if self.options:
+                self.playback = self.options.playSound
             #print 'passing freq:', freq
-            self.sound, self.error = self.get_sound(self.freq)
-            self.sound.play(sleep=False)
-            self.sound_silence.play(sleep=False)
+            if self.playback:
+                self.sound, self.error = self.get_sound(self.freq)
+                self.sound.play(sleep=False)
+                self.sound_silence.play(sleep=False)
             #print 'sound'
+            if self.error:
+                self.kill_process()
 
 
     def start_sound_output(self):
@@ -56,13 +62,13 @@ class SoundManager():
         return self.parent_conn, self.p_process
 
 
-    def adjust_sound(self, centers):
+    def adjust_sound(self, centers, options):
         if len(centers) == 0:
             self.freq = 100
         else:
             self.freq = centers[0][0] + centers[0][1]
         #print 'sending freq:', freq
-        self.parent_conn.send([self.freq])
+        self.parent_conn.send([self.freq, options])
 
 
     def kill_process(self):
