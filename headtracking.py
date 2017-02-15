@@ -163,10 +163,39 @@ class Tracking(threading.Thread):
             pass
         elif key == 84: #key 'down'
             pass
-        elif key == 111: #key 'o'
-            pass
+        elif key == 115: #key 's'
+            if self.options.playSound:
+                print('Muting sound')
+                self.options.playSound = False
+            else:
+                print('Turn on sound output')
+                self.options.playSound = True
         elif key == 99: #key 'c'
-            pass
+            if self.options.applyColormap:
+                print('Turn off colormaps')
+                self.options.applyColormap = False
+            else:
+                print('Turn on colormaps')
+                self.options.applyColormap = True
+        elif key == 102: #key 'f'
+            if self.options.trackFaces:
+                print('Turn off face tracking')
+                self.options.trackFaces = False
+            else:
+                print('Turn on face tracking')
+                self.options.trackFaces = True
+        elif key == 114: #key 'r'
+            if self.options.replaceEyes:
+                print('Start replacing eyes')
+                self.options.replaceEyes = False
+            else:
+                print('Stop replacing eyes')
+                self.options.replaceEyes = True
+        elif key == 111: #key 'o'
+            if self.options.showOptions:
+                self.options.showOptions = False
+            else:
+                self.options.showOptions = True
         else:
             print key
 
