@@ -35,6 +35,7 @@ class SoundManager():
 
     def __init__(self):
         """
+        object initialized in main() of headtracking.py
         initializes attributes:
             freq (int): pitch of generated sound in Hz, default is 100
             p_process (Process): the sound playback process
@@ -51,6 +52,8 @@ class SoundManager():
     def get_sound(self, freq=100):
         """
         generates "a" vowel for sound playback with given pitch frequency
+            (based on brian.hears sound generation)
+        called in every time step by sound_process()
         input:
             freq (int): pitch frequency of generated sound in Hz, default is 100
         output:
@@ -79,6 +82,8 @@ class SoundManager():
     def sound_process(self):
         """
         the sound process for playing back sound
+        called by start_sound_output()
+        calls get_sound
         receives parameters from adjust_sound() via Pipe connection
         """
         self.sound_silence = silence(duration=0.5*second)   # the silent break between vowels
@@ -107,25 +112,41 @@ class SoundManager():
     def start_sound_output(self):
         """
         starts the sound playback process
+        called in main() of headtracking.py
         outputs:
-            parent_conn (Connection)
+            parent_conn (Connection): Pipe connection end for handling the sound process,
+                needed in adjust_sound()
+            p_process (Process): the sound playback process
         """
-            #start process to generate the sound
         self.parent_conn, self.child_conn = Pipe()
+            # child_conn is receiving end of process pipe used in sound_process()
         self.p_process = Process(target=self.sound_process, args=())
         self.p_process.start()
         return self.parent_conn, self.p_process
 
 
     def adjust_sound(self, centers, options):
-        if len(centers) == 0:
+        """
+        transforms coordinates from tracking into pitch frequency of played back sound
+        interface between headtracking.py and SoundManager:
+            passes options from headtracking to sound generation in sound_process()
+            passes computed pitch frequency to sound generation in sound_process()
+        pitch frequency is just sum of given coordinates in Hz
+        called in every time step in run() method of Tracking object
+        """
+        if len(centers) == 0:   # no face was detected
             self.freq = 100
         else:
             self.freq = centers[0][0] + centers[0][1]
-        #print 'sending freq:', freq
+        if self.debug:
+            print 'sending freq:', freq
         self.parent_conn.send([self.freq, options])
 
 
     def kill_process(self):
+        """
+        terminates sound playback process
+        called by handle_key_event() method of Tracking object and sound_process()
+        """
         print 'Shutting down sound output.'
         self.p_process.terminate()
