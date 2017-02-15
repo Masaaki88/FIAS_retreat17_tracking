@@ -181,7 +181,6 @@ class Tracking(threading.Thread):
             cv2.destroyWindow('Facetracker')
             self.running = False
             self.Sound_Manager.kill_process()
-            #parent_conn.send(['kill', sound_process])
             print 'closing'
             return 0
         elif 49 <= key <= 57: #keys '1' - '9'
@@ -227,9 +226,6 @@ class Tracking(threading.Thread):
             print key
 
 if __name__ == '__main__':
-    
-    #parent_conn = None
-    #p_process = None
 
     #frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
     frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt.xml')

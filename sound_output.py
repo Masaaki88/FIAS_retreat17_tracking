@@ -1,19 +1,65 @@
 from multiprocessing import Process, Pipe
-from brian import *
-from brian.hears import *
+from brian import *         # for Hz and seconds
+from brian.hears import *   # for Sound class and vowel generation
 
 
 
 class SoundManager():
+    """
+    class for managing process for sound playback and sound generation
+
+    methods:
+        __init__()
+
+        get_sound():
+            input:  
+                freq (int), pitch of generated sound in Hz, default is 100
+            outputs:
+                a_sound_ramp2 (Sound), generated "a" vowel sound with given pitch
+                error (bool), whether error was encountered in method
+
+        sound_process()
+
+        start_sound_output():
+            outputs:
+                parent_conn (Connection): Pipe connection end for handling the sound process
+                p_process (Process): the sound playback process
+
+        adjust_sound():
+            inputs:
+                centers (([int, int])): tuple that includes x- and y-coordinate of tracked face center
+                options (Options): object with options as attributes
+
+        kill_process()
+    """
+
     def __init__(self):
+        """
+        initializes attributes:
+            freq (int): pitch of generated sound in Hz, default is 100
+            p_process (Process): the sound playback process
+            playback (bool): whether sound is played back
+            debug (bool): debug mode for verbose mode
+        """
         print 'Initializing sound process.'
         self.freq = 100
         self.p_process = None
         self.playback = True
+        self.debug = False
+
 
     def get_sound(self, freq=100):
+        """
+        generates "a" vowel for sound playback with given pitch frequency
+        input:
+            freq (int): pitch frequency of generated sound in Hz, default is 100
+        output:
+            a_sound_ramp2 (Sound): generated "a" vowel sound with given pitch
+            error (bool): whether error was encountered in method
+        """
         self.error = False
-        #print 'generating sound with freq:', freq
+        if self.debug:
+            print 'generating sound with freq:', freq
         while True:
             try:
                 self.freq = float(freq)
@@ -31,30 +77,39 @@ class SoundManager():
 
 
     def sound_process(self):
-        self.sound_silence = silence(duration=0.5*second)
+        """
+        the sound process for playing back sound
+        receives parameters from adjust_sound() via Pipe connection
+        """
+        self.sound_silence = silence(duration=0.5*second)   # the silent break between vowels
         self.error = False
         while not self.error:
+            # receive frequency and options from Pipe connection end handled in adjust_sound()
             try:
                 self.recv_obj = self.child_conn.recv()
-                #print  'received freq_list:', freq_list
             except EOFError:
                 self.recv_obj = [100, None]
-                #print 'No frequency received'
+                # recv_obj is [freq, options]
             self.freq = self.recv_obj[0]
             self.options = self.recv_obj[1]
             if self.options:
                 self.playback = self.options.playSound
-            #print 'passing freq:', freq
+            if self.debug:
+                print 'passing freq:', freq
             if self.playback:
                 self.sound, self.error = self.get_sound(self.freq)
                 self.sound.play(sleep=False)
                 self.sound_silence.play(sleep=False)
-            #print 'sound'
             if self.error:
                 self.kill_process()
 
 
     def start_sound_output(self):
+        """
+        starts the sound playback process
+        outputs:
+            parent_conn (Connection)
+        """
             #start process to generate the sound
         self.parent_conn, self.child_conn = Pipe()
         self.p_process = Process(target=self.sound_process, args=())
@@ -74,13 +129,3 @@ class SoundManager():
     def kill_process(self):
         print 'Shutting down sound output.'
         self.p_process.terminate()
-
-
-    def turn_off_playback(self):
-        print 'Turning off sound playback.'
-        self.playback = False
-
-
-    def turn_on_playback(self):
-        print 'Turning on sound playback.' 
-        self.playback = True
