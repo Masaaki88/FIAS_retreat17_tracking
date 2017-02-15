@@ -41,10 +41,33 @@ def draw_faces(grayscale_frame, frame, faces, centers, options):
 
     return frame
 
+def show_options(frame, options):
+    if not options.showOptions:
+        return frame
+    else:
+        y = 20
+        frame = cv2.putText(frame,"Options:",(10,y),cv2.FONT_HERSHEY_COMPLEX,.5,(0,255,0),thickness=1)
+        y += 20
+        frame = cv2.putText(frame, "'c': Apply colormap", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
+        y += 20
+        frame = cv2.putText(frame, "'f': Track faces", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
+        y += 20
+        frame = cv2.putText(frame, "'r': Replace Eyes", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
+        y += 20
+        frame = cv2.putText(frame, "'s': Play Audio", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
+        y += 20
+        frame = cv2.putText(frame, "'o': Show Options", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
+        y += 20
+        frame = cv2.putText(frame, "'Esc': Exit", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
+
+        return frame
+
 def color_frame(grayscale_frame, frame, scale, faces, centers, eye, eye_mask, options):
 
     if not options.applyColormap:
-        return frame
+        frame_b = frame[:,:,0]
+        frame_g = frame[:,:,1]
+        frame_r = frame[:,:,2]
     else:
         factor = scale * 10
 
@@ -57,49 +80,51 @@ def color_frame(grayscale_frame, frame, scale, faces, centers, eye, eye_mask, op
         frame_b = cv2.LUT(frame_grayscale, b)
         frame_g = cv2.LUT(frame_grayscale, g)
         frame_r = cv2.LUT(frame_grayscale, r)
+
+    if options.replaceEyes:
+
         for (x, y, w, h) in faces:
             frame_b[y:y+h,x:x+w] = frame[y:y+h,x:x+w,0]
             frame_g[y:y+h,x:x+w] = frame[y:y+h,x:x+w,1]
             frame_r[y:y+h,x:x+w] = frame[y:y+h,x:x+w,2]
 
-            if options.replaceEyes:
+            roi_gray = grayscale_frame[y:y + h, x:x + w]
+            eyes = eye_cascade.detectMultiScale(roi_gray)
+            for (ex, ey, ew, eh) in eyes:
+                centerX = int(x + ex + (ew / 2))
+                centerY = int(y + ey + (eh / 2))
 
-                roi_gray = grayscale_frame[y:y + h, x:x + w]
-                eyes = eye_cascade.detectMultiScale(roi_gray)
-                for (ex, ey, ew, eh) in eyes:
-                    centerX = int(x + ex + (ew / 2))
-                    centerY = int(y + ey + (eh / 2))
+                centerXOffset = int(centerX-eye.shape[0]/2)
+                centerYOffset = int(centerY-eye.shape[1]/2)
+                fg = eye[:,:,0]
+                fg = cv2.bitwise_or(fg, fg, mask=eye_mask)
+                bg = frame_b[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]]
+                bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
+                frame_b[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
 
-                    centerXOffset = int(centerX-eye.shape[0]/2)
-                    centerYOffset = int(centerY-eye.shape[1]/2)
-                    fg = eye[:,:,0]
-                    fg = cv2.bitwise_or(fg, fg, mask=eye_mask)
-                    bg = frame_b[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]]
-                    bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
-                    frame_b[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
+                fg = eye[:, :, 1]
+                fg = cv2.bitwise_or(fg, fg, mask=eye_mask)
+                bg = frame_g[centerYOffset:centerYOffset + eye.shape[1], centerXOffset:centerXOffset + eye.shape[0]]
+                bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
+                frame_g[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
 
-                    fg = eye[:, :, 1]
-                    fg = cv2.bitwise_or(fg, fg, mask=eye_mask)
-                    bg = frame_g[centerYOffset:centerYOffset + eye.shape[1], centerXOffset:centerXOffset + eye.shape[0]]
-                    bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
-                    frame_g[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
+                fg = eye[:, :, 2]
+                fg = cv2.bitwise_or(fg, fg, mask=eye_mask)
+                bg = frame_r[centerYOffset:centerYOffset + eye.shape[1], centerXOffset:centerXOffset + eye.shape[0]]
+                bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
+                frame_r[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
 
-                    fg = eye[:, :, 2]
-                    fg = cv2.bitwise_or(fg, fg, mask=eye_mask)
-                    bg = frame_r[centerYOffset:centerYOffset + eye.shape[1], centerXOffset:centerXOffset + eye.shape[0]]
-                    bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
-                    frame_r[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
+    frame = cv2.merge((frame_b,frame_g,frame_r))
 
-        frame = cv2.merge((frame_b,frame_g,frame_r))
-
-        return frame
+    return frame
 
 class Options:
     def __init__(self):
         self.applyColormap = False
         self.trackFaces = False
         self.replaceEyes = False
-        self.playSound = True
+        self.playSound = False
+        self.showOptions = True
 
 
 class Tracking(threading.Thread):
@@ -139,7 +164,9 @@ class Tracking(threading.Thread):
                 self.lstFoundCenters = centers
 
             #print 'time:', self.time
-            cv2.imshow("Facetracker", draw_faces(frame_grayscale, color_frame(frame_grayscale, frame, self.time, faces, centers, eye, eye_mask, self.options),faces, centers, self.options));
+            frame = draw_faces(frame_grayscale, color_frame(frame_grayscale, frame, self.time, faces, centers, eye, eye_mask, self.options),faces, centers, self.options)
+            frame = show_options(frame, self.options)
+            cv2.imshow("Facetracker", frame)
             #print 'showed image'
             key = cv2.waitKey(5) & 0xFF
             if key != 255:
