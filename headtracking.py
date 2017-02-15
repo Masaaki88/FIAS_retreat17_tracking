@@ -92,9 +92,6 @@ def color_frame(grayscale_frame, frame, scale, faces, centers, eye, eye_mask):
             bg = frame_r[centerYOffset:centerYOffset + eye.shape[1], centerXOffset:centerXOffset + eye.shape[0]]
             bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
             frame_r[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
-            #frame_b[y+ey:y+ey+eh,x+ex:x+ex+ew] = cv2.LUT(frame_grayscale[y+ey:y+ey+eh,x+ex:x+ex+ew], b_)
-            #frame_g[y+ey:y+ey+eh,x+ex:x+ex+ew] = cv2.LUT(frame_grayscale[y+ey:y+ey+eh,x+ex:x+ex+ew], g_)
-            #frame_r[y+ey:y+ey+eh,x+ex:x+ex+ew] = cv2.LUT(frame_grayscale[y+ey:y+ey+eh,x+ex:x+ex+ew], r_)
 
     frame = cv2.merge((frame_b,frame_g,frame_r))
 
@@ -113,6 +110,7 @@ class Tracking(threading.Thread):
         threading.Thread.__init__(self)
 		
     def run(self):
+
         eye = cv2.imread('assets/eye.png')
         eye_mask = cv2.imread('assets/eye_mask')
 
