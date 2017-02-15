@@ -35,7 +35,7 @@ def sound_process(conn):
             #print  'received freq_list:', freq_list
         except EOFError:
             recv_obj = [100]
-            print 'No frequency received'
+            #print 'No frequency received'
         if recv_obj == ['kill']:
             p_process.terminate()
         else:
