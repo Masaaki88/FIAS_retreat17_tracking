@@ -3,7 +3,7 @@ import numpy as np
 import pdb
 import matplotlib.cm as cm
 import threading
-from sound_output import start_sound_output, adjust_sound
+from sound_output import SoundManager
 
 
 def find_faces(input):
@@ -98,7 +98,7 @@ def color_frame(grayscale_frame, frame, scale, faces, centers, eye, eye_mask):
     return frame
 
 class Tracking(threading.Thread):
-    def __init__(self, graphics_out):
+    def __init__(self, graphics_out, Sound_Manager):
         #cv2.namedWindow('Facetracker')
 
         self.graphics_in = graphics_out
@@ -106,6 +106,7 @@ class Tracking(threading.Thread):
         self.lstFoundFaces = []
         self.lstFoundCenters = []
         self.running = True
+        self.Sound_Manager = Sound_Manager
         
         threading.Thread.__init__(self)
 		
@@ -122,7 +123,7 @@ class Tracking(threading.Thread):
             frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             centers, faces = find_faces(frame_grayscale)
-            adjust_sound(centers)
+            self.Sound_Manager.adjust_sound(centers)
 
             if np.asarray(faces).size == 0:
                 faces = self.lstFoundFaces
@@ -146,7 +147,8 @@ class Tracking(threading.Thread):
         if key == 27: #key 'ESC'
             cv2.destroyWindow('Facetracker')
             self.running = False
-            parent_conn.send(['kill'])
+            self.Sound_Manager.kill_process()
+            #parent_conn.send(['kill', sound_process])
             print 'closing'
             return 0
         elif 49 <= key <= 57: #keys '1' - '9'
@@ -175,8 +177,11 @@ if __name__ == '__main__':
     eye_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_eye.xml')
     #profile_faces_cascade = cv2.CascadeClassifier('haarcascade/haarcascade_profileface.xml')
     cap = cv2.VideoCapture(0)
-    parent_conn = start_sound_output()
-    tracker = Tracking(graphics_out = cap) # geht das oder muss das eine function sein?
+
+    Sound_Manager = SoundManager()
+    parent_conn, sound_process = Sound_Manager.start_sound_output()
+
+    tracker = Tracking(graphics_out = cap, Sound_Manager = Sound_Manager) # geht das oder muss das eine function sein?
     tracker.start()
     
     #main()
