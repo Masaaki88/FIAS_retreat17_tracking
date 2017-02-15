@@ -6,20 +6,23 @@ import threading
 from sound_output import SoundManager
 
 
-def find_faces(input):
+def find_faces(input, options):
 
-    faces = frontal_faces_cascade.detectMultiScale(input, 1.3, 5)
+    if not options.trackFaces:
+        return [], []
+    else:
+        faces = frontal_faces_cascade.detectMultiScale(input, 1.3, 5)
 
-    #if np.asarray(faces).size == 0:
-        #faces = profile_faces_cascade.detectMultiScale(input, 1.3, 5)
+        #if np.asarray(faces).size == 0:
+            #faces = profile_faces_cascade.detectMultiScale(input, 1.3, 5)
 
-    centers = []
-    for (x,y,w,h) in faces:
-        centers.append((int(x + (w/2)), int(y + (h/2))))
+        centers = []
+        for (x,y,w,h) in faces:
+            centers.append((int(x + (w/2)), int(y + (h/2))))
 
-    return centers, faces
+        return centers, faces
 
-def draw_faces(grayscale_frame, frame, faces, centers):
+def draw_faces(grayscale_frame, frame, faces, centers, options):
 
     for (x, y, w, h) in faces:
         cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
@@ -38,64 +41,66 @@ def draw_faces(grayscale_frame, frame, faces, centers):
 
     return frame
 
-def color_frame(grayscale_frame, frame, scale, faces, centers, eye, eye_mask):
+def color_frame(grayscale_frame, frame, scale, faces, centers, eye, eye_mask, options):
 
-    #if len(centers) > 0:
-        #factor = int((centers[0][1] - frame.shape[1] / 2) / 10)
-    #else:
-        #factor = 0
+    if not options.applyColormap:
+        return frame
+    else:
+        factor = scale * 10
 
-    factor = scale * 10
-    #factor = scale * factor
-    #factor = factor
+        frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        b = np.roll(np.squeeze((cm.prism(np.arange(256))[:,2]*255).astype(np.uint8)), factor)
+        g = np.roll(np.squeeze((cm.prism(np.arange(256))[:,1]*255).astype(np.uint8)), factor)
+        r = np.roll(np.squeeze((cm.prism(np.arange(256))[:,0]*255).astype(np.uint8)), factor)
 
-    b = np.roll(np.squeeze((cm.prism(np.arange(256))[:,2]*255).astype(np.uint8)), factor)
-    g = np.roll(np.squeeze((cm.prism(np.arange(256))[:,1]*255).astype(np.uint8)), factor)
-    r = np.roll(np.squeeze((cm.prism(np.arange(256))[:,0]*255).astype(np.uint8)), factor)
+        frame_b = cv2.LUT(frame_grayscale, b)
+        frame_g = cv2.LUT(frame_grayscale, g)
+        frame_r = cv2.LUT(frame_grayscale, r)
+        for (x, y, w, h) in faces:
+            frame_b[y:y+h,x:x+w] = frame[y:y+h,x:x+w,0]
+            frame_g[y:y+h,x:x+w] = frame[y:y+h,x:x+w,1]
+            frame_r[y:y+h,x:x+w] = frame[y:y+h,x:x+w,2]
 
-    b_ = np.roll(np.squeeze((cm.flag(np.arange(256))[:, 2] * 255).astype(np.uint8)), factor)
-    g_ = np.roll(np.squeeze((cm.flag(np.arange(256))[:, 1] * 255).astype(np.uint8)), factor)
-    r_ = np.roll(np.squeeze((cm.flag(np.arange(256))[:, 0] * 255).astype(np.uint8)), factor)
+            if options.replaceEyes:
 
-    frame_b = cv2.LUT(frame_grayscale, b)
-    frame_g = cv2.LUT(frame_grayscale, g)
-    frame_r = cv2.LUT(frame_grayscale, r)
-    for (x, y, w, h) in faces:
-        frame_b[y:y+h,x:x+w] = frame[y:y+h,x:x+w,0]
-        frame_g[y:y+h,x:x+w] = frame[y:y+h,x:x+w,1]
-        frame_r[y:y+h,x:x+w] = frame[y:y+h,x:x+w,2]
+                roi_gray = grayscale_frame[y:y + h, x:x + w]
+                eyes = eye_cascade.detectMultiScale(roi_gray)
+                for (ex, ey, ew, eh) in eyes:
+                    centerX = int(x + ex + (ew / 2))
+                    centerY = int(y + ey + (eh / 2))
 
-        roi_gray = grayscale_frame[y:y + h, x:x + w]
-        eyes = eye_cascade.detectMultiScale(roi_gray)
-        for (ex, ey, ew, eh) in eyes:
-            centerX = int(x + ex + (ew / 2))
-            centerY = int(y + ey + (eh / 2))
+                    centerXOffset = int(centerX-eye.shape[0]/2)
+                    centerYOffset = int(centerY-eye.shape[1]/2)
+                    fg = eye[:,:,0]
+                    fg = cv2.bitwise_or(fg, fg, mask=eye_mask)
+                    bg = frame_b[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]]
+                    bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
+                    frame_b[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
 
-            centerXOffset = int(centerX-eye.shape[0]/2)
-            centerYOffset = int(centerY-eye.shape[1]/2)
-            fg = eye[:,:,0]
-            fg = cv2.bitwise_or(fg, fg, mask=eye_mask)
-            bg = frame_b[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]]
-            bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
-            frame_b[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
+                    fg = eye[:, :, 1]
+                    fg = cv2.bitwise_or(fg, fg, mask=eye_mask)
+                    bg = frame_g[centerYOffset:centerYOffset + eye.shape[1], centerXOffset:centerXOffset + eye.shape[0]]
+                    bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
+                    frame_g[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
 
-            fg = eye[:, :, 1]
-            fg = cv2.bitwise_or(fg, fg, mask=eye_mask)
-            bg = frame_g[centerYOffset:centerYOffset + eye.shape[1], centerXOffset:centerXOffset + eye.shape[0]]
-            bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
-            frame_g[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
+                    fg = eye[:, :, 2]
+                    fg = cv2.bitwise_or(fg, fg, mask=eye_mask)
+                    bg = frame_r[centerYOffset:centerYOffset + eye.shape[1], centerXOffset:centerXOffset + eye.shape[0]]
+                    bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
+                    frame_r[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
 
-            fg = eye[:, :, 2]
-            fg = cv2.bitwise_or(fg, fg, mask=eye_mask)
-            bg = frame_r[centerYOffset:centerYOffset + eye.shape[1], centerXOffset:centerXOffset + eye.shape[0]]
-            bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
-            frame_r[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
+        frame = cv2.merge((frame_b,frame_g,frame_r))
 
-    frame = cv2.merge((frame_b,frame_g,frame_r))
+        return frame
 
-    return frame
+class Options:
+    def __init__(self):
+        self.applyColormap = False
+        self.trackFaces = False
+        self.replaceEyes = False
+        self.playSound = False
+
 
 class Tracking(threading.Thread):
     def __init__(self, graphics_out, Sound_Manager):
@@ -107,6 +112,7 @@ class Tracking(threading.Thread):
         self.lstFoundCenters = []
         self.running = True
         self.Sound_Manager = Sound_Manager
+        self.options = Options()
         
         threading.Thread.__init__(self)
 		
@@ -122,7 +128,7 @@ class Tracking(threading.Thread):
             _, frame = self.graphics_in.read()
             frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            centers, faces = find_faces(frame_grayscale)
+            centers, faces = find_faces(frame_grayscale, self.options)
             self.Sound_Manager.adjust_sound(centers)
 
             if np.asarray(faces).size == 0:
@@ -133,7 +139,7 @@ class Tracking(threading.Thread):
                 self.lstFoundCenters = centers
 
             #print 'time:', self.time
-            cv2.imshow("Facetracker", draw_faces(frame_grayscale, color_frame(frame_grayscale, frame, self.time, faces, centers, eye, eye_mask),faces, centers));
+            cv2.imshow("Facetracker", draw_faces(frame_grayscale, color_frame(frame_grayscale, frame, self.time, faces, centers, eye, eye_mask, self.options),faces, centers, self.options));
             #print 'showed image'
             key = cv2.waitKey(5) & 0xFF
             if key != 255:
