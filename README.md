@@ -1,4 +1,4 @@
-# Real-Time Headtracking with Haar Cacades 
+# Real-Time Headtracking with Haar Cascades 
 
 ## Introduction
 
