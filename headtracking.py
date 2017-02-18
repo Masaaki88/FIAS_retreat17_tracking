@@ -4,63 +4,7 @@ import pdb
 import matplotlib.cm as cm
 import threading
 from sound_output import SoundManager
-
-
-def find_faces(input, options):
-
-    if not options.trackFaces:
-        return [], []
-    else:
-        faces = frontal_faces_cascade.detectMultiScale(input, 1.3, 5)
-
-        #if np.asarray(faces).size == 0:
-            #faces = profile_faces_cascade.detectMultiScale(input, 1.3, 5)
-
-        centers = []
-        for (x,y,w,h) in faces:
-            centers.append((int(x + (w/2)), int(y + (h/2))))
-
-        return centers, faces
-
-def draw_faces(grayscale_frame, frame, faces, centers, options):
-
-    for (x, y, w, h) in faces:
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
-        if len(centers) > 0:
-            cv2.circle(frame,centers[0],5,(0,0,255),2)
-        roi_gray = grayscale_frame[y:y + h, x:x + w]
-        roi_color = frame[y:y + h, x:x + w]
-        eyes = eye_cascade.detectMultiScale(roi_gray)
-        for (ex, ey, ew, eh) in eyes:
-            cv2.rectangle(roi_color, (ex, ey), (ex + ew, ey + eh), (0, 255, 0), 2)
-            
-        #smiles = smile_cascade.detectMultiScale(roi_gray)
-        #for (ex, ey, ew, eh) in smiles:
-        #    cv2.rectangle(roi_color, (ex, ey), (ex + ew, ey + eh), (0, 255, 255), 2)
-            
-
-    return frame
-
-def show_options(frame, options):
-    if not options.showOptions:
-        return frame
-    else:
-        y = 20
-        frame = cv2.putText(frame,"Options:",(10,y),cv2.FONT_HERSHEY_COMPLEX,.5,(0,255,0),thickness=1)
-        y += 20
-        frame = cv2.putText(frame, "'c': Apply colormap", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
-        y += 20
-        frame = cv2.putText(frame, "'f': Track faces", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
-        y += 20
-        frame = cv2.putText(frame, "'r': Replace Eyes", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
-        y += 20
-        frame = cv2.putText(frame, "'s': Play Audio", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
-        y += 20
-        frame = cv2.putText(frame, "'o': Show Options", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
-        y += 20
-        frame = cv2.putText(frame, "'Esc': Exit", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
-
-        return frame
+from TrackedObject import *
 
 def color_frame(grayscale_frame, frame, scale, faces, centers, eye, eye_mask, options):
 
@@ -122,9 +66,37 @@ class Options:
     def __init__(self):
         self.applyColormap = False
         self.trackFaces = False
+        self.trackEyes = False
         self.replaceEyes = False
         self.playSound = False
         self.showOptions = True
+
+    def drawOptions(self, frame):
+        if self.showOptions:
+            y = 20
+            frame = cv2.putText(frame, "Options:", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
+            y += 20
+            frame = cv2.putText(frame, "'c': Apply colormap", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0),
+                                thickness=1)
+            y += 20
+            frame = cv2.putText(frame, "'f': Track faces", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0),
+                                thickness=1)
+            y += 20
+            frame = cv2.putText(frame, "'e': Track Eyes", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0),
+                                thickness=1)
+            y += 20
+            frame = cv2.putText(frame, "'r': Replace Eyes", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0),
+                                thickness=1)
+            y += 20
+            frame = cv2.putText(frame, "'s': Play Audio", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0),
+                                thickness=1)
+            y += 20
+            frame = cv2.putText(frame, "'o': Show Options", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0),
+                                thickness=1)
+            y += 20
+            frame = cv2.putText(frame, "'Esc': Exit", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
+
+        return frame
 
 
 class Tracking(threading.Thread):
@@ -138,42 +110,37 @@ class Tracking(threading.Thread):
         self.running = True
         self.Sound_Manager = Sound_Manager
         self.options = Options()
-        
+
+        _, frame = self.graphics_in.read()
+        TrackedObject.options = self.options
+        self.root = TrackedObject()
+        self.root.setBoundingBox( 0, 0, frame.shape[0], frame.shape[1] )
+
         threading.Thread.__init__(self)
-		
+
     def run(self):
 
-        eye = cv2.imread('assets/eye.png')
-        eye_mask = cv2.imread('assets/eye_mask')
-
         while self.running:
-            # self.graphics_in(inputParams) #
             self.time += 1
 
             _, frame = self.graphics_in.read()
-            frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            centers, faces = find_faces(frame_grayscale, self.options)
-            self.Sound_Manager.adjust_sound(centers, self.options)
+            TrackedObject.setCurFrame( self.time, frame )
+            self.root.findObjects()
 
-            if np.asarray(faces).size == 0:
-                faces = self.lstFoundFaces
-                centers = self.lstFoundCenters
-            else:
-                self.lstFoundFaces = faces
-                self.lstFoundCenters = centers
+            frame = self.root.drawBoundingBox( frame )
+            frame = Eyes.replaceEyes( frame )
 
-            #print 'time:', self.time
-            frame = draw_faces(frame_grayscale, color_frame(frame_grayscale, frame, self.time, faces, centers, eye, eye_mask, self.options),faces, centers, self.options)
-            frame = show_options(frame, self.options)
+            # TODO: Adjust to fit in with new TrackedObject class
+            self.Sound_Manager.adjust_sound(Face.listOf, self.options)
+
+            frame = self.options.drawOptions(frame)
             cv2.imshow("Facetracker", frame)
-            #print 'showed image'
+
             key = cv2.waitKey(5) & 0xFF
             if key != 255:
                 self.handle_key_event(key)
-            
-        
-                
+
     def handle_key_event(self, key):
         global parent_conn
         ## TODO: implement keybindings
@@ -210,6 +177,13 @@ class Tracking(threading.Thread):
             else:
                 print('Turn on face tracking')
                 self.options.trackFaces = True
+        elif key == 101:  # key 'e'
+            if self.options.trackEyes:
+                print('Turn off eye tracking')
+                self.options.trackEyes = False
+            else:
+                print('Turn on eye tracking')
+                self.options.trackEyes = True
         elif key == 114: #key 'r'
             if self.options.replaceEyes:
                 print('Start replacing eyes')
@@ -227,13 +201,6 @@ class Tracking(threading.Thread):
 
 if __name__ == '__main__':
 
-    #frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')
-    frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt.xml')
-    #frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt2.xml')
-    #frontal_faces_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_alt_tree.xml')
-    #smile_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_smile.xml')
-    eye_cascade = cv2.CascadeClassifier('haarcascades/haarcascade_eye.xml')
-    #profile_faces_cascade = cv2.CascadeClassifier('haarcascade/haarcascade_profileface.xml')
     cap = cv2.VideoCapture(0)
 
     Sound_Manager = SoundManager()

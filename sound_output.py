@@ -125,7 +125,7 @@ class SoundManager():
         return self.parent_conn, self.p_process
 
 
-    def adjust_sound(self, centers, options):
+    def adjust_sound(self, faces, options):
         """
         transforms coordinates from tracking into pitch frequency of played back sound
         interface between headtracking.py and SoundManager:
@@ -134,10 +134,10 @@ class SoundManager():
         pitch frequency is just sum of given coordinates in Hz
         called in every time step in run() method of Tracking object
         """
-        if len(centers) == 0:   # no face was detected
+        if len(faces) == 0:   # no face was detected
             self.freq = 100
         else:
-            self.freq = centers[0][0] + centers[0][1]
+            self.freq = faces[0].centerAbs[0] + faces[0].centerAbs[1]
         if self.debug:
             print 'sending freq:', freq
         self.parent_conn.send([self.freq, options])
