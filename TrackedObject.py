@@ -203,12 +203,15 @@ class TrackedObject:
                 trackableObject = TrackedObject.factory( childType )
                 trackableObject.parent = self
                 trackableObject.setBoundingBox( int(x), int(y), int(w), int(h) )
-                trackableObject.findObjects()
+                #trackableObject.findObjects()
                 childs.append(trackableObject)
 
         if len(childs) > 0:
             self.childs = childs
             self.lastDetection = TrackedObject.frameCount
+
+        for child in self.childs:
+            child.findObjects()
 
     def detect(self, subframeG):
         pass
@@ -216,8 +219,9 @@ class TrackedObject:
 
     def drawBoundingBox(self, frame):
 
-        for child in self.childs:
-            child.drawBoundingBox( frame )
+        if TrackedObject.options.drawBoundingboxes:
+            for child in self.childs:
+                child.drawBoundingBox( frame )
 
         return frame
 
@@ -290,13 +294,29 @@ class Eyes(TrackedObject):
                           (self.xAbs + self.w, self.yAbs + self.h),
                           (0, 255, 0),
                           2)
+            cv2.circle(frame,(self.centerAbs[0],self.centerAbs[1]),5,
+                       (255,0,0),thickness=2)
 
             TrackedObject.drawBoundingBox( self, frame )
 
         return frame
 
     def replaceEyes( frame ):
-        # TODO: Implement
+        if TrackedObject.options.replaceEyes:
+            for eye in Eyes.listOf:
+                for i in range(0,3):
+                    fg = Eyes.replacement[:, :, i]
+                    fg = cv2.bitwise_or(fg, fg, mask=Eyes.replacementMask)
+
+                    offsetY = int(eye.centerAbs[1] - Eyes.replacement.shape[1] / 2)
+                    offsetX = int(eye.centerAbs[0] - Eyes.replacement.shape[0] / 2)
+
+                    bg = TrackedObject.frame[offsetY:offsetY + Eyes.replacement.shape[1],
+                         offsetX:offsetX + Eyes.replacement.shape[0],i]
+                    bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(Eyes.replacementMask))
+
+                    frame[offsetY:offsetY + Eyes.replacement.shape[1],
+                    offsetX:offsetX + Eyes.replacement.shape[0],i] = cv2.bitwise_or(fg, bg)
         return frame
     replaceEyes = staticmethod(replaceEyes)
 

@@ -1,103 +1,10 @@
 import cv2
 import numpy as np
-import pdb
-import matplotlib.cm as cm
 import threading
 from sound_output import SoundManager
 from TrackedObject import *
-
-def color_frame(grayscale_frame, frame, scale, faces, centers, eye, eye_mask, options):
-
-    if not options.applyColormap:
-        frame_b = frame[:,:,0]
-        frame_g = frame[:,:,1]
-        frame_r = frame[:,:,2]
-    else:
-        factor = scale * 10
-
-        frame_grayscale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-        b = np.roll(np.squeeze((cm.prism(np.arange(256))[:,2]*255).astype(np.uint8)), factor)
-        g = np.roll(np.squeeze((cm.prism(np.arange(256))[:,1]*255).astype(np.uint8)), factor)
-        r = np.roll(np.squeeze((cm.prism(np.arange(256))[:,0]*255).astype(np.uint8)), factor)
-
-        frame_b = cv2.LUT(frame_grayscale, b)
-        frame_g = cv2.LUT(frame_grayscale, g)
-        frame_r = cv2.LUT(frame_grayscale, r)
-
-    if options.replaceEyes:
-
-        for (x, y, w, h) in faces:
-            frame_b[y:y+h,x:x+w] = frame[y:y+h,x:x+w,0]
-            frame_g[y:y+h,x:x+w] = frame[y:y+h,x:x+w,1]
-            frame_r[y:y+h,x:x+w] = frame[y:y+h,x:x+w,2]
-
-            roi_gray = grayscale_frame[y:y + h, x:x + w]
-            eyes = eye_cascade.detectMultiScale(roi_gray)
-            for (ex, ey, ew, eh) in eyes:
-                centerX = int(x + ex + (ew / 2))
-                centerY = int(y + ey + (eh / 2))
-
-                centerXOffset = int(centerX-eye.shape[0]/2)
-                centerYOffset = int(centerY-eye.shape[1]/2)
-                fg = eye[:,:,0]
-                fg = cv2.bitwise_or(fg, fg, mask=eye_mask)
-                bg = frame_b[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]]
-                bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
-                frame_b[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
-
-                fg = eye[:, :, 1]
-                fg = cv2.bitwise_or(fg, fg, mask=eye_mask)
-                bg = frame_g[centerYOffset:centerYOffset + eye.shape[1], centerXOffset:centerXOffset + eye.shape[0]]
-                bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
-                frame_g[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
-
-                fg = eye[:, :, 2]
-                fg = cv2.bitwise_or(fg, fg, mask=eye_mask)
-                bg = frame_r[centerYOffset:centerYOffset + eye.shape[1], centerXOffset:centerXOffset + eye.shape[0]]
-                bg = cv2.bitwise_or(bg, bg, mask=cv2.bitwise_not(eye_mask))
-                frame_r[centerYOffset:centerYOffset+eye.shape[1],centerXOffset:centerXOffset+eye.shape[0]] = cv2.bitwise_or(fg, bg)
-
-    frame = cv2.merge((frame_b,frame_g,frame_r))
-
-    return frame
-
-class Options:
-    def __init__(self):
-        self.applyColormap = False
-        self.trackFaces = False
-        self.trackEyes = False
-        self.replaceEyes = False
-        self.playSound = False
-        self.showOptions = True
-
-    def drawOptions(self, frame):
-        if self.showOptions:
-            y = 20
-            frame = cv2.putText(frame, "Options:", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
-            y += 20
-            frame = cv2.putText(frame, "'c': Apply colormap", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0),
-                                thickness=1)
-            y += 20
-            frame = cv2.putText(frame, "'f': Track faces", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0),
-                                thickness=1)
-            y += 20
-            frame = cv2.putText(frame, "'e': Track Eyes", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0),
-                                thickness=1)
-            y += 20
-            frame = cv2.putText(frame, "'r': Replace Eyes", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0),
-                                thickness=1)
-            y += 20
-            frame = cv2.putText(frame, "'s': Play Audio", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0),
-                                thickness=1)
-            y += 20
-            frame = cv2.putText(frame, "'o': Show Options", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0),
-                                thickness=1)
-            y += 20
-            frame = cv2.putText(frame, "'Esc': Exit", (10, y), cv2.FONT_HERSHEY_COMPLEX, .5, (0, 255, 0), thickness=1)
-
-        return frame
-
+from VisualTransformations import *
+from Options import Options
 
 class Tracking(threading.Thread):
     def __init__(self, graphics_out, Sound_Manager):
@@ -129,9 +36,19 @@ class Tracking(threading.Thread):
             self.root.findObjects()
 
             frame = self.root.drawBoundingBox( frame )
+
+            masks = np.empty((len(Face.listOf),4),dtype=np.uint)
+            for i in range(0,len(Face.listOf)):
+                face = Face.listOf[i]
+                masks[i] = np.asarray([face.xAbs,face.yAbs,face.w,face.h],dtype=np.uint8)
+
+            frame = applyColormap(frame,
+                                  self.options.colorMap,
+                                  scale=self.time,
+                                  factor=5,
+                                  masks=masks)
             frame = Eyes.replaceEyes( frame )
 
-            # TODO: Adjust to fit in with new TrackedObject class
             self.Sound_Manager.adjust_sound(Face.listOf, self.options)
 
             frame = self.options.drawOptions(frame)
@@ -166,9 +83,11 @@ class Tracking(threading.Thread):
         elif key == 99: #key 'c'
             if self.options.applyColormap:
                 print('Turn off colormaps')
+                self.options.colorMap = None
                 self.options.applyColormap = False
             else:
                 print('Turn on colormaps')
+                self.options.changeColormap(self.options.lstColorMap)
                 self.options.applyColormap = True
         elif key == 102: #key 'f'
             if self.options.trackFaces:
@@ -208,5 +127,3 @@ if __name__ == '__main__':
 
     tracker = Tracking(graphics_out = cap, Sound_Manager = Sound_Manager) # geht das oder muss das eine function sein?
     tracker.start()
-    
-    #main()
