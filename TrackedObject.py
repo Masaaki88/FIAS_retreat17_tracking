@@ -228,7 +228,8 @@ class TrackedObject:
 class Face(TrackedObject):
 
     childTypes = ["Eyes"]
-    cascadeClassifier = [cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')]
+    #cascadeClassifier = [cv2.CascadeClassifier('haarcascades/haarcascade_frontalface_default.xml')]
+    cascadeClassifier = [cv2.CascadeClassifier('lbpcascade/lbpcascade_frontalface_improved.xml')]
 
     listOf = []
 
