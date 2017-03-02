@@ -24,7 +24,7 @@
 
 \begin{abstract}
 \bfseries{
-\noindent This project implements a framework for real-time detection of faces and facial features in a video stream produced by a webcam. The video signal is captured and processed using OpenCV, an extensive library for computer vision that is widely used in academic as well as commercial projects. The detection pipeline is based on a cascade classifier with haar-like feature detectors. Models already trained for face and eye detection as well as an performant implementation of the cascade classifier are provided by the OpenCV project. The results of the detection pipeline are further processed and used to alter the output of the video stream as well as control the amplitude and pitch of a tone generated with brian, a spiking neural network simulator. The project is part of a series of projects that were conducted by students of the Frankfurt Institute of Advanced Studies (FIAS) during the FIAS retreat 2017. The projects were planed and implemented over the course of two days. 
+\noindent This project implements a framework for real-time detection of faces and facial features in a video stream produced by a webcam. The video signal is captured and processed using OpenCV, an extensive library for computer vision that is widely used in academic as well as commercial projects. The detection pipeline is based on a cascade classifier with haar-like feature detectors. Models already trained for face and eye detection as well as an performant implementation of the cascade classifier are provided by the OpenCV project. The results of the detection pipeline are further processed and used to alter the output of the video stream as well as control the amplitude and pitch of a tone generated with brian, a spiking neural network simulator. The project is part of a series of projects that were conducted by students of the Frankfurt Institute of Advanced Studies (FIAS) during the FIAS retreat 2017. The projects were planned and implemented over the course of two days. 
 }
 \end{abstract}
 
@@ -48,11 +48,15 @@ An additional gain in processing speed of an individual frame can be achieved by
         \caption{Haar-like filter that responds to the eyes.}
         \label{fig:<+label+>}
     \end{subfigure}
-    \caption{Taken from \ldots}
+    \caption{Licensed under CC BY-SA 4.0 by user Soumyanilcsc (en.wikipedia.org)}
     \label{fig:haar-filter}
 \end{figure}
 
 Both ideas are combined in the work of Viola \& Jones (2001)\cite{ViolaJones2001}. The four most important aspects of their work and the main steps in the detection pipeline are (1) the description of an image in form of an integral image with which features can be computed in constant time. (2) The selection of a set of basis function (features) that respond particularly well to common facial features. (3) Using AdaBoost to learn a subset of pairs of basis function and position out of all possible such pairs that is sufficient to detect a face in the searing window and (4) a classification cascade that concentrates most of the computation time on the most promising sub-windows, that is, sub-windows that potentially contain a relevant object in the input.
+
+In this project, the detection pipeline is used to detect faces and eyes of humans in a video stream produced by a webcam. The signal is captured and further processed with OpenCV. Processing of the video stream involves: Applying of a time-dependent color map altering the colors of the entire frame except for sub-windows that contain a face and replacing the eyes with exaggerated, cartoonish looking versions of them. Furthermore, the amplitude and pitch of a  tone generated with brian is altered based on the central position of the first detected face in the two dimensional image space. Combined, all this alterations create a fever dream like version of the perceived reality.
+
+\vfill
 
 \begin{thebibliography}{9}
 
